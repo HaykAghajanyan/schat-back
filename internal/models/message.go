@@ -16,11 +16,12 @@ type Message struct {
 type WSMessageType string
 
 const (
-	WSMessageTypeChat    WSMessageType = "chat"
-	WSMessageTypeTyping  WSMessageType = "typing"
-	WSMessageTypeRead    WSMessageType = "read"
-	WSMessageTypeOnline  WSMessageType = "online"
-	WSMessageTypeOffline WSMessageType = "offline"
+	WSMessageTypeChat     WSMessageType = "chat"
+	WSMessageTypeTyping   WSMessageType = "typing"
+	WSMessageTypeRead     WSMessageType = "read"
+	WSMessageTypeOnline   WSMessageType = "online"
+	WSMessageTypeOffline  WSMessageType = "offline"
+	WSMessageTypePresence WSMessageType = "presence"
 )
 
 type WSMessage struct {
@@ -32,11 +33,12 @@ type WSMessage struct {
 }
 
 type WSOutgoingMessage struct {
-	Type      WSMessageType `json:"type"`
-	Message   *Message      `json:"message,omitempty"`
-	MessageID int           `json:"message_id,omitempty"`
-	SenderID  int           `json:"sender_id,omitempty"`
-	Timestamp time.Time     `json:"timestamp"`
+	Type        WSMessageType `json:"type"`
+	Message     *Message      `json:"message,omitempty"`
+	MessageID   int           `json:"message_id,omitempty"`
+	SenderID    int           `json:"sender_id,omitempty"`
+	OnlineUsers []int         `json:"online_users,omitempty"`
+	Timestamp   time.Time     `json:"timestamp"`
 }
 
 type ConversationPreview struct {

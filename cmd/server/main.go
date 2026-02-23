@@ -74,6 +74,9 @@ func main() {
 	r.Post("/api/auth/register", authHandler.Register)
 	r.Post("/api/auth/login", authHandler.Login)
 
+	// WebSocket route
+	r.Get("/ws", wsHandler.HandleWebSocket)
+
 	// Protected routes
 	r.Group(func(r chi.Router) {
 		r.Use(authMiddleware.RequireAuth)
@@ -87,9 +90,6 @@ func main() {
 		r.Get("/api/messages/conversation/{userID}", messageHandler.GetConversation)
 		r.Get("/api/messages/unread-count", messageHandler.GetUnreadCount)
 		r.Put("/api/messages/{messageID}/read", messageHandler.MarkAsRead)
-
-		// WebSocket route
-		r.Get("/ws", wsHandler.HandleWebSocket)
 	})
 
 	log.Printf("Server starting on port %s", cfg.Port)
