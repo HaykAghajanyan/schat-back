@@ -1,0 +1,59 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: schat-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: schat-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  app1:
+    build: .
+    container_name: schat-app1
+    env_file: .env
+    environment:
+      PORT: 8080
+      DB_HOST: postgres
+      REDIS_ADDR: redis:6379
+    depends_on:
+      - postgres
+      - redis
+
+  app2:
+    build: .
+    container_name: schat-app2
+    env_file: .env
+    environment:
+      PORT: 8080
+      DB_HOST: postgres
+      REDIS_ADDR: redis:6379
+    depends_on:
+      - postgres
+      - redis
+
+  nginx:
+    image: nginx:alpine
+    container_name: schat-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app1
+      - app2
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	broker "github.com/HaykAghajanyan/chat-backend/internal/brocker"
 	"github.com/HaykAghajanyan/chat-backend/internal/config"
 	"github.com/HaykAghajanyan/chat-backend/internal/database"
 	"github.com/HaykAghajanyan/chat-backend/internal/handlers"
@@ -41,8 +42,11 @@ func main() {
 	// Initialize services
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
 
+	// Initialize Redis
+	redisBroker := broker.New(cfg.Redis.Addr)
+
 	// Initialize WebSocket hub
-	hub := websocket.NewHub()
+	hub := websocket.NewHub(redisBroker)
 	go hub.Run() // Start hub in background
 
 	// Initialize middleware

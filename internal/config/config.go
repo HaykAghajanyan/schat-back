@@ -12,6 +12,7 @@ type Config struct {
 	Environment string
 	JWTSecret   string
 	Database    DatabaseConfig
+	Redis       RedisConfig
 }
 
 type DatabaseConfig struct {
@@ -21,6 +22,10 @@ type DatabaseConfig struct {
 	Password string
 	DBName   string
 	SSLMode  string
+}
+
+type RedisConfig struct {
+	Addr string
 }
 
 func Load() *Config {
@@ -39,6 +44,9 @@ func Load() *Config {
 			Password: getEnv("DB_PASSWORD", "chatpass123"),
 			DBName:   getEnv("DB_NAME", "chatdb"),
 			SSLMode:  getEnv("DB_SSLMODE", "disable"),
+		},
+		Redis: RedisConfig{
+			Addr: getEnv("REDIS_ADDR", "localhost:6379"),
 		},
 	}
 }

@@ -1,11 +1,13 @@
 package websocket
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"sync"
 	"time"
 
+	broker "github.com/HaykAghajanyan/chat-backend/internal/brocker"
 	"github.com/HaykAghajanyan/chat-backend/internal/models"
 )
 
@@ -20,31 +22,42 @@ type Hub struct {
 	mu         sync.RWMutex
 	Register   chan *Client
 	Unregister chan *Client
-	Broadcast  chan *BroadcastMessage
+	broker     *broker.Broker
 }
 
-type BroadcastMessage struct {
-	UserID  int
-	Message []byte
-}
-
-func NewHub() *Hub {
+func NewHub(b *broker.Broker) *Hub {
 	return &Hub{
 		clients:    make(map[int]*Client),
 		Register:   make(chan *Client),
 		Unregister: make(chan *Client),
-		Broadcast:  make(chan *BroadcastMessage),
+		broker:     b,
 	}
 }
 
 // Run starts the hub's main loop
 func (h *Hub) Run() {
+	h.broker.Subscribe(context.Background(), func(userID int, payload []byte) {
+		h.mu.RLock()
+		client, ok := h.clients[userID]
+		h.mu.RUnlock()
+
+		if ok {
+			select {
+			case client.Send <- payload:
+			default:
+				h.mu.Lock()
+				close(client.Send)
+				delete(h.clients, userID)
+				h.mu.Unlock()
+			}
+		}
+	})
+
 	for {
 		select {
 		case client := <-h.Register:
 			h.mu.Lock()
 			h.clients[client.UserID] = client
-			log.Printf("User %d connected. Total connections: %d", client.UserID, len(h.clients))
 			h.sendOnlineListLocked(client)
 			h.broadcastPresenceLocked(client.UserID, models.WSMessageTypeOnline, client.UserID)
 			h.mu.Unlock()
@@ -54,37 +67,17 @@ func (h *Hub) Run() {
 			if _, ok := h.clients[client.UserID]; ok {
 				delete(h.clients, client.UserID)
 				close(client.Send)
-				log.Printf("User %d disconnected. Total connections: %d", client.UserID, len(h.clients))
 				h.broadcastPresenceLocked(-1, models.WSMessageTypeOffline, client.UserID)
 			}
 			h.mu.Unlock()
-
-		case message := <-h.Broadcast:
-			h.mu.RLock()
-			client, ok := h.clients[message.UserID]
-			h.mu.RUnlock()
-
-			if ok {
-				select {
-				case client.Send <- message.Message:
-					// Message sent successfully
-				default:
-					// Client's send channel is full, close connection
-					h.mu.Lock()
-					close(client.Send)
-					delete(h.clients, client.UserID)
-					h.mu.Unlock()
-				}
-			}
 		}
 	}
 }
 
 // SendToUser sends a message to a specific user
 func (h *Hub) SendToUser(userID int, message []byte) {
-	h.Broadcast <- &BroadcastMessage{
-		UserID:  userID,
-		Message: message,
+	if err := h.broker.Publish(context.Background(), userID, message); err != nil {
+		log.Printf("broker error: failed to publish message for user %d: %v", userID, err)
 	}
 }
 
